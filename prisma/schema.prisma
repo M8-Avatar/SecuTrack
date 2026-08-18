@@ -2,6 +2,7 @@
 // CONFIGURATION
 // ADR-001 : Stack Next.js / Prisma
 // ADR-002 : Persistance PostgreSQL
+// ADR-003 : Persistance polyglotte — le journal d'activité est hors Prisma (MongoDB)
 // ==========================================
 
 generator client {
@@ -46,8 +47,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assignedActions Action[]    @relation("ActionAssignee")
-  triggeredLogs   ActionLog[] @relation("LogAuthor")
+  assignedActions Action[] @relation("ActionAssignee")
 
   @@map("users")
 }
@@ -116,30 +116,11 @@ model Action {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  logs ActionLog[]
-
   @@map("actions")
 }
 
-model ActionLog {
-  id          String   @id @default(uuid())
-  timestamp   DateTime @default(now())
-  eventType   String
-  description String
-
-  // Clé étrangère vers Action (RESTRICT : on ne supprime jamais un log)
-  actionId String
-  action   Action @relation(fields: [actionId], references: [id], onDelete: Restrict)
-
-  // Clé étrangère vers User (l'auteur)
-  authorId String
-  author   User   @relation("LogAuthor", fields: [authorId], references: [id], onDelete: Restrict)
-
-  // Pas de createdAt/updatedAt ni de archivedAt : un log est strictement immuable
-  @@map("action_logs")
-}
-
-// NOTE DE CONCEPTION (Transaction) :
-// Le créateur d'une Action étant déduit de la première ligne d'ActionLog,
-// l'insertion d'une Action et de son premier ActionLog doit obligatoirement
-// s'effectuer au sein d'une même Transaction côté serveur (Prisma $transaction).
+// NOTE DE CONCEPTION (Journal d'activité) :
+// Le journal (ActionLog) ne relève plus de Prisma : il est géré hors de ce schéma,
+// dans la collection MongoDB "action_logs" (voir ADR-003 et src/lib/db/mongo.ts).
+// L'atomicité SQL+NoSQL étant impossible, l'écriture est ordonnée « log d'abord » :
+// le log est inséré dans MongoDB AVANT la création de l'Action dans PostgreSQL.

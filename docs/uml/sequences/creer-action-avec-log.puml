@@ -1,12 +1,13 @@
 @startuml
-title Séquence — Création d'une action corrective + premier log (transaction)
-' Trace : SPEC-ACTION-01, SPEC-ACTION-03
-' Illustre l'invariante : Action + premier ActionLog créés atomiquement
+title Séquence — Création d'une action corrective + premier log (écriture ordonnée « log d'abord »)
+' Trace : SPEC-ACTION-01, SPEC-ACTION-03, ADR-003
+' Illustre l'invariante applicative : jamais d'action sans trace (log orphelin toléré)
 
 actor "Administrateur" as admin
 participant "Interface\n(formulaire)" as ui
 participant "Server Action\ncreateAction()" as server
 participant "Couche Domaine" as domain
+database "MongoDB\n(journal)" as mongo
 database "PostgreSQL\n(Prisma)" as db
 
 admin -> ui : Saisit titre, échéance,\nrisque et responsable
@@ -17,34 +18,78 @@ server -> server : Vérifie session serveur\n(rôle == ADMIN)
 
 alt rôle non autorisé
     server --> ui : Erreur 403 (accès refusé)
+    note right of server
+      Aucune écriture, ni MongoDB ni PostgreSQL.
+    end note
 else rôle ADMIN
     server -> domain : valider(données)
+    activate domain
     domain --> server : données valides
+    deactivate domain
 
-    server -> db : $transaction START
+    server -> server : Génère l'UUID de l'action\n(actionId, côté application)
+    note right of server
+      L'actionId n'est pas délégué à PostgreSQL :
+      il est généré par l'application AVANT les deux
+      écritures, puis réutilisé tel quel pour le
+      document MongoDB ET pour la ligne PostgreSQL.
+      Le log peut donc être écrit en premier tout en
+      portant déjà l'identifiant définitif de l'action
+      — aucun rattachement a posteriori n'est requis.
+    end note
+
+    group 1. Log d'abord (MongoDB)
+        server -> mongo : createActionLog(actionId, authorId,\neventType "création", description, timestamp)
+        activate mongo
+        mongo --> server : document inséré
+        deactivate mongo
+    end
+
+    group 2. Action ensuite (PostgreSQL)
+    server -> db : INSERT action (id = actionId, ...)
     activate db
-    server -> db : INSERT action (...)
-    db --> server : action (id)
-    server -> db : INSERT action_log\n(actionId, authorId, "création")
-    db --> server : log créé
 
-    alt une insertion échoue
-        server -> db : ROLLBACK
-        db --> server : transaction annulée
-        server --> ui : Erreur (rien n'est créé)
+    alt l'écriture PostgreSQL échoue
+        db --> server : erreur
+        deactivate db
+        server --> ui : Erreur (action non créée)
+        note right of server
+          Le log MongoDB existe déjà : il devient
+          un log orphelin — trace d'une tentative
+          de création n'ayant pas abouti.
+          Il n'est jamais supprimé (log immuable).
+        end note
     else succès
-        server -> db : COMMIT
-        db --> server : validé
+        db --> server : action créée (id)
+        deactivate db
         server --> ui : Succès
     end
-    deactivate db
+    end
 end
 deactivate server
 ui --> admin : Confirmation ou message d'erreur
 
 note over server, db
-  L'action et son premier log sont indissociables :
-  le ROLLBACK garantit qu'aucune action ne peut
-  exister sans la trace de son créateur.
+  **Compromis assumé (ADR-003)**
+  Persistance polyglotte : aucune transaction ne peut couvrir
+  MongoDB et PostgreSQL. L'atomicité cross-base est impossible.
+
+  L'ordre d'écriture choisit donc la défaillance acceptée :
+  * **log d'abord** — un log orphelin (log sans action) est toléré :
+    pour un outil d'audit, une tentative tracée est une information ;
+  * une **action sans log** devient impossible : c'est la seule
+    défaillance inacceptable (CR-01/Q06, CR-01/Q11).
+
+  L'invariante n'est plus transactionnelle mais **applicative** :
+  elle ne tient que si tout chemin de création respecte cet ordre.
+
+  Les logs orphelins sont ignorés en lecture (filtrage par
+  rapprochement avec les actions existantes), ou nettoyés par un
+  job de maintenance optionnel.
+
+  Alternative pour une atomicité forte : l'**outbox pattern**
+  (log consigné dans PostgreSQL au sein de la transaction métier,
+  puis relayé vers MongoDB). Non retenu — sur-ingénierie au vu
+  de la volumétrie attendue.
 end note
 @enduml

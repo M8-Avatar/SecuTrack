@@ -1,5 +1,5 @@
 
-**Stack :** Next.js / TypeScript full-stack (ADR-001), PostgreSQL via Prisma (ADR-002)
+**Stack :** Next.js / TypeScript full-stack (ADR-001), PostgreSQL via Prisma pour le cœur relationnel (ADR-002), MongoDB pour le journal d'activité (ADR-003)
 **Type :** application web monolithique modulaire, rendu et logique côté serveur
 
 ## 1. Vue d'ensemble
@@ -17,8 +17,8 @@ L'application est organisée en couches, du plus proche de l'utilisateur au plus
 | Présentation | Affichage, formulaires, feu tricolore | Composants React (Server + Client Components) |
 | Application / Contrôle | Point d'entrée des actions utilisateur, vérification des droits, validation | Server Actions / Route Handlers |
 | Domaine / Métier | Règles métier : calcul de criticité, majoration R-04, catégorisation | Modules de service TypeScript (`/lib/domain`) |
-| Accès aux données | Requêtes, transactions, filtrage soft-delete | Prisma Client (`/lib/db`) |
-| Persistance | Stockage relationnel | PostgreSQL |
+| Accès aux données | Requêtes, transactions, filtrage soft-delete ; écriture et lecture du journal | Prisma Client (SQL) + driver MongoDB natif (journal), dans `/lib/db` |
+| Persistance | Stockage relationnel et documentaire | PostgreSQL (cœur relationnel) + MongoDB (journal d'activité) |
 
 **Décision structurante :** la logique métier (calcul de criticité SPEC-RISK-01/03, majoration R-04) est isolée dans la couche Domaine, indépendamment du framework. Elle ne dépend ni de Prisma ni de Next.js — ce qui la rend testable unitairement (cohérent avec la stratégie de test) et protège contre le couplage fort identifié comme coût dans l'ADR-001.
 
@@ -38,9 +38,17 @@ Conformément aux décisions de modélisation, la criticité, la catégorie et l
 
 Voir le diagramme de séquence : `docs/uml/sequences/calcul-criticite-rgpd.puml`.
 
-## 5. Transaction et invariante de traçabilité
+## 5. Persistance polyglotte et invariante de traçabilité
 
-La création d'une Action et de son premier ActionLog s'effectue dans une transaction unique (`prisma.$transaction`). Cette garantie technique honore l'invariante de traçabilité stricte définie lors de la modélisation du domaine (aucune action ne peut exister sans la trace de son créateur).
+La persistance est répartie sur deux moteurs (ADR-003). Le cœur relationnel (User, Asset, Risk, Action) reste sur **PostgreSQL**, accédé via Prisma (ADR-002). Le journal d'activité (ActionLog) est sur **MongoDB**, dans la collection `action_logs`, accédé via le driver `mongodb` natif — pas via Prisma.
+
+**Pourquoi l'invariante change de nature :** aucune transaction ne peut couvrir les deux moteurs. L'atomicité qui garantissait auparavant « Action et premier log, tout ou rien » n'est plus disponible. L'invariante de traçabilité stricte définie lors de la modélisation du domaine (aucune action ne peut exister sans la trace de son créateur) devient donc **applicative** : elle est portée par l'ordre des écritures, non par le SGBD.
+
+**L'écriture ordonnée « log d'abord » :** la couche Application génère l'UUID de l'action, écrit le log de création dans MongoDB avec cet identifiant, puis crée l'Action dans PostgreSQL en réutilisant le même id. L'identifiant étant produit en amont des deux écritures, le log porte dès son insertion la référence définitive de l'action — aucun rattachement a posteriori n'est nécessaire.
+
+**Conséquence assumée :** si l'écriture PostgreSQL échoue, le log MongoDB subsiste sans action correspondante. Ce **log orphelin** est la trace d'une tentative de création n'ayant pas abouti — une information exploitable pour un audit, pas une corruption. La défaillance inverse, une action sans log, est rendue impossible par l'ordre retenu. Les logs orphelins ne sont jamais supprimés (un log est immuable) : ils sont ignorés en lecture, par rapprochement avec les actions existantes, ou traités par un job de maintenance optionnel.
+
+**Alternative écartée :** l'outbox pattern (log consigné dans PostgreSQL au sein de la transaction métier, puis relayé vers MongoDB par un processus asynchrone avec réessai) restaurerait une garantie de livraison sans transaction distribuée. Non retenu — sur-ingénierie au vu de la volumétrie attendue. Le mécanisme reste disponible si la criticité du journal s'élève (voir ADR-003 §6).
 
 Voir le diagramme de séquence : `docs/uml/sequences/creer-action-avec-log.puml`.
 
@@ -58,7 +66,8 @@ L'organisation du dépôt reflète strictement le découpage en couches pour emp
 │ └── lib/
 │ ├── actions/ # Couche Application : Server Actions (contrôle d'accès, DB)
 │ ├── auth/ # Fonctions utilitaires de session et vérification RBAC
-│ ├── db/ # Couche Accès aux données : instance Prisma (soft-delete)
+│ ├── db/ # Couche Accès aux données : instance Prisma (SQL, soft-delete)
+│ │ └── mongo.ts # Accès NoSQL au journal d'activité (MongoDB, ADR-003)
 │ └── domain/ # Couche Métier pure : TypeScript standard, SANS dépendances
 │ ├── risk/ # Ex : calculateRiskCriticality(prob, impact, isSensitive)
 │ └── action/ # Ex : checkActionOverdue(dueDate, currentDate)
