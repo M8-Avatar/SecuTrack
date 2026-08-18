@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: ["main"]
   schedule:
-    - cron: "0 3 * * 1" # Tous les lundis à 03:00 UTC
+    - cron: "0 3 * * 1"
 
 permissions:
   contents: read
@@ -22,12 +22,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: "fs"
           scan-ref: "."
           scanners: "vuln,misconfig,secret"
           severity: "CRITICAL,HIGH"
+          limit-severities-for-sarif: true
           ignore-unfixed: true
           format: "sarif"
           output: "trivy-results.sarif"
