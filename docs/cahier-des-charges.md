@@ -99,9 +99,11 @@ L'association gère des données critiques sans processus formalisé ni centrali
 | REQ-004 | L'application doit permettre la création d'actions correctives, leur assignation à un utilisateur et le suivi de leur statut. | Must | Julien | CR-01/Q12 |
 | REQ-005 | L'application doit fournir au Contributeur un affichage restreint listant uniquement ses propres tâches assignées, avec possibilité d'en modifier le statut. | Must | Thomas | CR-01/Q05, Q07 |
 | REQ-006 | L'application doit afficher un historique textuel des actions (qui, quoi, quand) directement au sein du détail de chaque tâche. | Must | Julien | CR-01/Q11 |
-| **Transversal — Confort et évolutions** | | | | |
-| REQ-007 | L'application devrait mettre en évidence visuellement (badge, icône) les tâches dont l'échéance est dépassée. | Should | Thomas | CR-01/Q07 |
-| REQ-008 | L'application pourrait proposer un rôle « consultation seule » pour d'éventuels prestataires externes. | Could | Julien | CR-01/Q16 |
+
+> **Évolution envisagée (hors V1) :** un rôle « consultation seule » pour un
+> prestataire externe ponctuel a été évoqué (CR-01/Q16). Le client l'ayant
+> explicitement dépriorisé, il n'est pas spécifié en V1 et ne fait l'objet
+> d'aucune exigence à ce stade. Voir aussi le tableau « Hors périmètre » (§6).
 
 ## 10. Exigences non fonctionnelles
 

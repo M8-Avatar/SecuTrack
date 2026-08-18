@@ -33,7 +33,7 @@
 
 ## SPEC-RISK-03 : Pondération de la criticité (Impact RGPD)
 
-**Traçabilité :** R-04
+**Traçabilité :** REQ-002, R-04
 **Description :** La présence de données sensibles sur un actif doit aggraver la note finale de tout risque qui pèse sur lui.
 
 **Critères d'acceptation**
