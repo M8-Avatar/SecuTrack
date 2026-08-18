@@ -1,0 +1,145 @@
+// ==========================================
+// CONFIGURATION
+// ADR-001 : Stack Next.js / Prisma
+// ADR-002 : Persistance PostgreSQL
+// ==========================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ÉNUMÉRATIONS
+// ==========================================
+
+enum Role {
+  ADMIN
+  CONTRIBUTOR
+}
+
+enum ActionStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+// ==========================================
+// MODÈLE DE DONNÉES (MLD PHYSIQUE)
+// ==========================================
+
+model User {
+  id           String @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String @unique
+  passwordHash String
+  role         Role   @default(CONTRIBUTOR)
+
+  // Suppression logique pour préserver l'historique d'audit (hypothèse CR-01)
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedActions Action[]    @relation("ActionAssignee")
+  triggeredLogs   ActionLog[] @relation("LogAuthor")
+
+  @@map("users")
+}
+
+model Asset {
+  id   String @id @default(uuid())
+  name String
+  type String
+
+  // R-04 : marqueur RGPD persistant
+  isSensitive Boolean @default(false)
+
+  // SPEC-ASSET-01 : résultat figé du questionnaire.
+  // NOTE DEV : migration SQL brute requise pour CHECK("impactLevel" BETWEEN 1 AND 4)
+  impactLevel Int
+
+  // Suppression logique (soft delete) pour protéger l'historique et satisfaire les FK Restrict
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  risks Risk[]
+
+  @@map("assets")
+}
+
+model Risk {
+  id          String @id @default(uuid())
+  description String
+
+  // Échelles 1-4.
+  // NOTE DEV : migration SQL brute requise pour CHECK BETWEEN 1 AND 4 (probability et impact)
+  probability Int
+  impact      Int
+
+  // Clé étrangère vers Asset : RESTRICT (le soft-delete gère la dissimulation)
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  actions Action[]
+
+  @@map("risks")
+}
+
+model Action {
+  id     String       @id @default(uuid())
+  title  String
+  status ActionStatus @default(TODO)
+
+  // Harmonisation avec le MLD (DATE plutôt que TIMESTAMP)
+  dueDate DateTime @db.Date
+
+  // Clé étrangère vers Risk (RESTRICT pour protéger l'historique)
+  riskId String
+  risk   Risk   @relation(fields: [riskId], references: [id], onDelete: Restrict)
+
+  // Clé étrangère vers User (le responsable)
+  assigneeId String
+  assignee   User   @relation("ActionAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  logs ActionLog[]
+
+  @@map("actions")
+}
+
+model ActionLog {
+  id          String   @id @default(uuid())
+  timestamp   DateTime @default(now())
+  eventType   String
+  description String
+
+  // Clé étrangère vers Action (RESTRICT : on ne supprime jamais un log)
+  actionId String
+  action   Action @relation(fields: [actionId], references: [id], onDelete: Restrict)
+
+  // Clé étrangère vers User (l'auteur)
+  authorId String
+  author   User   @relation("LogAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  // Pas de createdAt/updatedAt ni de archivedAt : un log est strictement immuable
+  @@map("action_logs")
+}
+
+// NOTE DE CONCEPTION (Transaction) :
+// Le créateur d'une Action étant déduit de la première ligne d'ActionLog,
+// l'insertion d'une Action et de son premier ActionLog doit obligatoirement
+// s'effectuer au sein d'une même Transaction côté serveur (Prisma $transaction).
