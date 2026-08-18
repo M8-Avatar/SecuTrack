@@ -1,0 +1,18 @@
+# <type>(<domaine>): <SPEC-ID> <description courte à l'impératif>
+#
+# <pourquoi ce changement, si ce n'est pas évident à la lecture du diff>
+#
+# Generated-by: <outil>     ← à conserver UNIQUEMENT si le contenu a été produit par l'agent
+#
+# ---------------------------------------------------------------------------
+# type     : spec | design | test | feat | fix | docs | chore
+# domaine  : booking | cancel | payment | admin | …
+# SPEC-ID  : SPEC-BOOKING-04 — obligatoire pour spec, test, feat, fix
+#
+# Exemples
+#   spec(cancel): SPEC-CANCEL-03 annulation client à moins de 48h
+#   test(cancel): CASE-CANCEL-11 retenue de 50 % sur le montant total
+#   feat(cancel): SPEC-CANCEL-03 règle de retenue dans CancellationPolicy
+#
+# Activer ce gabarit :  git config commit.template .gitmessage
+# ---------------------------------------------------------------------------
