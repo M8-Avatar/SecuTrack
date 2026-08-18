@@ -52,3 +52,24 @@
   - Étant donné le contributeur « Thomas » authentifié
   - Quand il tente d'accéder à l'URL des risques ou des actifs (via l'interface ou une requête directe)
   - Alors le système refuse la requête et affiche une page « Accès non autorisé » (sans exposer de données métier).
+
+## SPEC-AUTH-04 : Cycle de vie du mot de passe (provisoire, changement forcé, réinitialisation)
+
+**Traçabilité :** R-01, REQ-104
+**Description :** Un compte est créé par un administrateur avec un mot de passe provisoire. L'utilisateur doit le changer à sa première connexion. En cas d'oubli, seul un administrateur peut réinitialiser l'accès (pas de réinitialisation en libre-service, cohérent avec l'absence d'e-mail — CR-01/Q07).
+
+**Critères d'acceptation**
+
+- Scénario 1 : Changement forcé à la première connexion
+  - Étant donné un compte créé par un administrateur avec un mot de passe provisoire
+  - Quand l'utilisateur se connecte pour la première fois avec ce mot de passe provisoire
+  - Alors le système l'oblige à définir un nouveau mot de passe avant d'accéder à l'application
+  - Et le nouveau mot de passe doit respecter la politique de longueur (SPEC-AUTH-02).
+- Scénario 2 : Réinitialisation par un administrateur
+  - Étant donné un utilisateur ayant perdu son mot de passe
+  - Quand un administrateur réinitialise son accès
+  - Alors le système génère un nouveau mot de passe provisoire, et l'utilisateur sera de nouveau contraint de le changer à sa prochaine connexion (retour au scénario 1).
+- Scénario 3 : Absence de réinitialisation en libre-service
+  - Étant donné un utilisateur non authentifié sur la page de connexion
+  - Quand il utilise le lien « Mot de passe oublié ? »
+  - Alors le système l'invite à contacter son administrateur, sans proposer de formulaire de réinitialisation autonome.
