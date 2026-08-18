@@ -1,0 +1,50 @@
+@startuml
+title Séquence — Création d'une action corrective + premier log (transaction)
+' Trace : SPEC-ACTION-01, SPEC-ACTION-03
+' Illustre l'invariante : Action + premier ActionLog créés atomiquement
+
+actor "Administrateur" as admin
+participant "Interface\n(formulaire)" as ui
+participant "Server Action\ncreateAction()" as server
+participant "Couche Domaine" as domain
+database "PostgreSQL\n(Prisma)" as db
+
+admin -> ui : Saisit titre, échéance,\nrisque et responsable
+ui -> server : createAction(données)
+activate server
+
+server -> server : Vérifie session serveur\n(rôle == ADMIN)
+
+alt rôle non autorisé
+    server --> ui : Erreur 403 (accès refusé)
+else rôle ADMIN
+    server -> domain : valider(données)
+    domain --> server : données valides
+
+    server -> db : $transaction START
+    activate db
+    server -> db : INSERT action (...)
+    db --> server : action (id)
+    server -> db : INSERT action_log\n(actionId, authorId, "création")
+    db --> server : log créé
+
+    alt une insertion échoue
+        server -> db : ROLLBACK
+        db --> server : transaction annulée
+        server --> ui : Erreur (rien n'est créé)
+    else succès
+        server -> db : COMMIT
+        db --> server : validé
+        server --> ui : Succès
+    end
+    deactivate db
+end
+deactivate server
+ui --> admin : Confirmation ou message d'erreur
+
+note over server, db
+  L'action et son premier log sont indissociables :
+  le ROLLBACK garantit qu'aucune action ne peut
+  exister sans la trace de son créateur.
+end note
+@enduml

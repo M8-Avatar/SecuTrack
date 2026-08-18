@@ -1,0 +1,99 @@
+@startuml
+title Modèle de domaine — SecuTrack
+
+skinparam roundcorner 5
+skinparam class {
+  BackgroundColor White
+  ArrowColor Black
+  BorderColor #2C3E50
+}
+
+' ==========================================
+' ÉNUMÉRATIONS
+' ==========================================
+enum Role <<enumeration>> {
+  ADMIN
+  CONTRIBUTOR
+}
+
+enum ActionStatus <<enumeration>> {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+' ==========================================
+' ENTITÉS DU DOMAINE
+' ==========================================
+class User <<entity>> {
+  + id : UUID
+  + firstName : String
+  + lastName : String
+  + email : String
+  + passwordHash : String
+  + role : Role
+}
+
+class Asset <<entity>> {
+  + id : UUID
+  + name : String
+  + type : String
+  + isSensitive : Boolean <<flag>>
+  + impactLevel : Integer [1..4]
+}
+note left of Asset
+  Le détail des réponses au questionnaire n'est pas
+  persisté en V1. Seul le score résultant (impactLevel)
+  est conservé en base.
+end note
+
+class Risk <<entity>> {
+  + id : UUID
+  + description : String
+  + probability : Integer [1..4]
+  + impact : Integer [1..4]
+  --
+  + getCriticality() : Integer <<DÉDUIT>>
+  + getCategory() : String <<DÉDUIT>>
+}
+note right of Risk
+  La criticité et la catégorie sont calculées à la volée
+  (non persistées) via SPEC-RISK-01 et majorées via SPEC-RISK-03.
+end note
+
+class Action <<entity>> {
+  + id : UUID
+  + title : String
+  + status : ActionStatus
+  + dueDate : Date
+  --
+  + isOverdue() : Boolean <<DÉDUIT>>
+}
+note right of Action
+  L'auteur (créateur) de l'action n'a pas de clé étrangère
+  dédiée. Il est retracé via la première ligne de l'ActionLog
+  (historique in-situ).
+end note
+
+class ActionLog <<entity>> {
+  + id : UUID
+  + timestamp : DateTime
+  + eventType : String
+  + description : String
+}
+note right of ActionLog
+  Restriction V1 (CR-01/Q11) : l'audit global étant hors
+  périmètre, seules les actions disposent d'un journal
+  de traçabilité.
+end note
+
+' ==========================================
+' RELATIONS
+' ==========================================
+Asset "1" -- "0..*" Risk : menace >
+Risk "1" -- "0..*" Action : est traité par >
+User "1" -- "0..*" Action : est assigné à >
+Action "1" -- "0..*" ActionLog : possède historique >
+User "1" -- "0..*" ActionLog : déclenche >
+
+@enduml

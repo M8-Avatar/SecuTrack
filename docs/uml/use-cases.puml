@@ -1,0 +1,59 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+' ==========================================
+' Diagramme de cas d'usage — SecuTrack V1
+' Acteurs : Administrateur, Contributeur
+' Trace : SPEC-AUTH, SPEC-ASSET, SPEC-RISK, SPEC-ACTION
+' ==========================================
+
+actor "Administrateur" as admin
+actor "Contributeur" as contrib
+
+rectangle SecuTrack {
+
+  ' --- Domaine AUTH ---
+  usecase "Se connecter" as UC_login
+  usecase "Gérer les comptes\n(créer, désactiver)" as UC_users
+
+  ' --- Domaine ASSET ---
+  usecase "Cartographier un actif\n(questionnaire langage naturel)" as UC_asset
+  usecase "Marquer un actif sensible\n(RGPD)" as UC_flag
+
+  ' --- Domaine RISK ---
+  usecase "Évaluer un risque\n(probabilité x impact)" as UC_risk
+  usecase "Consulter le tableau de bord\n(feu tricolore)" as UC_dashboard
+
+  ' --- Domaine ACTION ---
+  usecase "Créer et assigner\nune action corrective" as UC_createAction
+  usecase "Suivre ses actions\nassignées" as UC_myActions
+  usecase "Mettre à jour le statut\nd'une action" as UC_updateStatus
+  usecase "Consulter l'historique\nd'une action" as UC_history
+}
+
+' --- Associations Administrateur ---
+admin --> UC_login
+admin --> UC_users
+admin --> UC_asset
+admin --> UC_flag
+admin --> UC_risk
+admin --> UC_dashboard
+admin --> UC_createAction
+admin --> UC_history
+
+' --- Associations Contributeur ---
+contrib --> UC_login
+contrib --> UC_myActions
+contrib --> UC_updateStatus
+
+' Le contributeur NE voit PAS le dashboard global ni la cartographie (REQ-102, R-03)
+
+note bottom of SecuTrack
+  Cloisonnement (REQ-102, R-03) : le Contributeur
+  n'accède qu'à ses propres actions assignées.
+  L'Auditeur/prestataire est hors périmètre V1 (CR-01/Q16).
+end note
+
+@enduml

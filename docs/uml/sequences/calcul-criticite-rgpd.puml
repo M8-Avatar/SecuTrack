@@ -1,0 +1,44 @@
+@startuml
+title Séquence — Calcul de la criticité d'un risque avec majoration RGPD
+' Trace : SPEC-RISK-01 (matrice), SPEC-RISK-03 (majoration R-04)
+' Illustre : calcul au serveur, jamais persisté (décision de modélisation)
+
+actor "Administrateur" as admin
+participant "Interface\n(dashboard)" as ui
+participant "Server Action\ngetDashboard()" as server
+participant "Couche Domaine\ncalculateCriticality()" as domain
+database "PostgreSQL" as db
+
+admin -> ui : Ouvre le tableau de bord
+ui -> server : getRisksWithCriticality()
+activate server
+
+server -> db : SELECT risks + asset lié\n(probability, impact, isSensitive)
+activate db
+db --> server : liste des risques bruts
+deactivate db
+
+loop pour chaque risque
+    server -> domain : calculateCriticality(proba, impact, isSensitive)
+    activate domain
+    domain -> domain : impactEffectif = impact
+    alt asset sensible (R-04)
+        domain -> domain : impactEffectif = min(impact + 1, 4)
+    end
+    domain -> domain : criticité = proba × impactEffectif
+    domain -> domain : catégorie = classer(criticité)\n(1-4 Vert / 5-9 Orange / 10-16 Rouge)
+    domain --> server : { criticité, catégorie }
+    deactivate domain
+end
+
+server -> server : trie par criticité décroissante
+server --> ui : risques priorisés + feu tricolore
+deactivate server
+ui --> admin : Dashboard (Critique en tête)
+
+note over domain
+  Fonction pure : primitives en entrée,
+  valeurs en sortie. Aucune dépendance Prisma/React.
+  criticité et catégorie ne sont jamais stockées.
+end note
+@enduml

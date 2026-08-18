@@ -1,0 +1,38 @@
+@startuml
+title Séquence — Cloisonnement du Contributeur (tentative d'accès illicite)
+' Trace : SPEC-AUTH-03, REQ-102, R-03, CASE-AUTH-02
+
+actor "Contributeur\n(Thomas)" as contrib
+participant "Middleware\n(barrière routage)" as mw
+participant "Server Action\n(barrière données)" as server
+database "PostgreSQL" as db
+
+== Cas 1 : accès direct à une route interdite ==
+contrib -> mw : GET /risks (saisie URL directe)
+activate mw
+mw -> mw : session valide ? rôle ?
+alt rôle == CONTRIBUTOR
+    mw --> contrib : Redirection /login ou /mes-actions\n(accès refusé)
+end
+deactivate mw
+
+== Cas 2 : accès à ses propres actions (légitime) ==
+contrib -> mw : GET /mes-actions
+activate mw
+mw -> server : route autorisée
+deactivate mw
+activate server
+server -> server : userId = session.userId\n(depuis token serveur, jamais du client)
+server -> db : SELECT actions\nWHERE assigneeId = userId
+activate db
+db --> server : uniquement ses actions
+deactivate db
+server --> contrib : ses tâches uniquement
+deactivate server
+
+note over server, db
+  Même si le contributeur forgeait une requête,
+  le filtre WHERE assigneeId = session.userId
+  rend impossible la lecture d'une donnée tierce (REQ-102).
+end note
+@enduml

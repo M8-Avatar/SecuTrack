@@ -1,0 +1,37 @@
+@startuml
+title Architecture en couches — SecuTrack
+skinparam componentStyle uml2
+
+package "Navigateur (Client)" {
+  [Interface Utilisateur (React)] as UI
+}
+
+package "Serveur (Next.js)" {
+  [Middleware\n(Routage & Auth)] as Middleware
+
+  package "Couche Application" {
+    [Server Actions / API\n(Autorisation & Validation)] as Actions
+  }
+
+  package "Couche Métier (Pure TS)" {
+    [Domaine\n(Calculs, Règles)] as Domain
+  }
+
+  package "Couche Accès aux Données" {
+    [Prisma Client\n(Filtres Soft-Delete)] as DB
+  }
+}
+
+database "PostgreSQL" as PG
+
+UI --> Middleware : Requêtes HTTP / Mutations
+Middleware --> Actions : Routage autorisé
+Actions --> Domain : Délègue la logique métier
+Actions --> DB : Délègue la persistance
+DB --> PG : SQL
+
+note right of Actions
+  L'orchestration s'effectue ici.
+  Le Domaine reste pur (sans dépendance externe).
+end note
+@enduml

@@ -1,0 +1,78 @@
+@startuml
+title MCD — SecuTrack (Merise)
+
+hide circle
+hide methods
+skinparam roundcorner 5
+skinparam class {
+  BackgroundColor White
+  ArrowColor Black
+  BorderColor #2C3E50
+}
+
+' ==========================================
+' ENTITÉS
+' ==========================================
+entity "User" as user {
+  * id : UUID
+  --
+  * firstName : String
+  * lastName : String
+  * email : String
+  * passwordHash : String
+  * role : String [ADMIN, CONTRIBUTOR]
+}
+
+entity "Asset" as asset {
+  * id : UUID
+  --
+  * name : String
+  * type : String
+  * isSensitive : Boolean
+  * impactLevel : Integer [1..4]
+}
+
+entity "Risk" as risk {
+  * id : UUID
+  --
+  * description : String
+  * probability : Integer [1..4]
+  * impact : Integer [1..4]
+}
+
+entity "Action" as action {
+  * id : UUID
+  --
+  * title : String
+  * status : String [TODO, IN_PROGRESS, DONE]
+  * dueDate : Date
+}
+
+entity "ActionLog" as actionlog {
+  * id : UUID
+  --
+  * timestamp : DateTime
+  * eventType : String
+  * description : String
+}
+
+' ==========================================
+' ASSOCIATIONS (cardinalités Merise)
+' ==========================================
+' Un Actif est menacé par (0,n) Risques. Un Risque concerne (1,1) Actif.
+asset "0,n" -- "1,1" risk : Menace >
+
+' Un Risque est traité par (0,n) Actions. Une Action traite (1,1) Risque.
+risk "0,n" -- "1,1" action : Traite >
+
+' Un User est assigné à (0,n) Actions. Une Action est assignée à (1,1) User.
+user "0,n" -- "1,1" action : Est assigné à >
+
+' Une Action possède (1,n) Logs. Un Log appartient à (1,1) Action.
+' Le minimum est 1 : la création génère obligatoirement le premier log.
+action "1,n" -- "1,1" actionlog : Possède historique >
+
+' Un User déclenche (0,n) Logs. Un Log est déclenché par (1,1) User.
+user "0,n" -- "1,1" actionlog : Déclenche >
+
+@enduml
