@@ -9,7 +9,7 @@
 - Arnaud Bidel, Concepteur Développeur d'Applications (maîtrise d'œuvre)
 - M. Julien Payet, Président de l'association « Réunion Nautique Jeunesse » (maîtrise d'ouvrage — commanditaire fictif)
 
-> Précision méthodologique : le projet étant réalisé en formation, sans commanditaire réel, ce document formalise un entretien de validation avec un profil-type représentatif du public cible (dirigeant associatif sans service SSI dédié). Le rôle du client a été tenu par un assistant IA. La question Q17 a été posée individuellement. Les questions Q18 à Q49 ont ensuite été transmises dans un seul lot écrit. Les questions Q50 à Q53 ont été posées à la suite, afin de lever trois points restés ouverts et de valider la synthèse de l'entretien.
+> Précision méthodologique : le projet étant réalisé en formation, sans commanditaire réel, ce document formalise un entretien de validation avec un profil-type représentatif du public cible (dirigeant associatif sans service SSI dédié). Le rôle du client a été tenu par un assistant IA. La question Q17 a été posée individuellement. Les questions Q18 à Q49 ont ensuite été transmises dans un seul lot écrit. Les questions Q50 à Q56 ont été posées à la suite, afin de lever les points restés ouverts et de valider la synthèse de l'entretien.
 
 **Q17 — [Arnaud Bidel]** : Après relecture de la version 1.2 du cahier des charges SecuTrack, considérez-vous que les objectifs, le périmètre retenu et les éléments explicitement hors périmètre correspondent bien à votre besoin pour la première version ? Y a-t-il un point que vous souhaitez modifier, ajouter ou retirer avant validation ?  
 **[M. Payet]** : Dans l'ensemble, oui, je m'y retrouve. Les trois grands objectifs, c'est bien ce que je vous avais dit : lister ce qu'on a, voir ce qui est grave, suivre qui fait quoi. Et le hors périmètre me va, je ne reviens pas dessus : pas d'e-mails, pas d'usine à gaz RGPD, pas d'inscription libre.  
@@ -136,6 +136,17 @@ Pour le reste, je valide. Enfin, sous réserve que ces deux points soient régl�
 
 Cette synthèse correspond-elle fidèlement à vos décisions ?  
 **[M. Payet]** : Oui, c'est bien ça, avec une précision sur le premier point. Je ne ferme pas la porte à toute solution de secours : ce qui me gêne, c'est un compte permanent qui a tous les pouvoirs et qui dort quelque part. Si vous me proposez autre chose qui ne laisse pas d'accès ouvert en temps normal, je vous écoute. Les points deux et trois, je confirme tels quels.
+
+## Complément d'entretien — 18 novembre 2026
+
+**Q54 — [Arnaud Bidel]** : Lorsqu'un administrateur quitte le bureau mais reste membre du club, doit-il devenir contributeur, perdre tout accès, ou une autre règle s'applique-t-elle ?  
+**[M. Payet]** : S'il n'est plus au bureau, il n'a plus à tout voir. Après, ça dépend de lui. S'il reste bénévole et qu'on lui confie des tâches, il a un compte limité comme les autres. Sinon, il n'a plus d'accès du tout. Ce n'est pas automatique : c'est le trésorier ou moi qui décidons, au cas par cas.
+
+**Q55 — [Arnaud Bidel]** : Lorsqu'un bénévole quitte le club alors qu'il a des actions en cours, que doit-il advenir de ces actions : elles sont réassignées, clôturées, ou une autre règle s'applique-t-elle ?  
+**[M. Payet]** : On les redonne à quelqu'un d'autre, et c'est le trésorier ou moi qui choisissons à qui. Je ne veux pas qu'elles disparaissent, ni qu'elles restent au nom de quelqu'un qui n'est plus là. Par contre, je veux qu'on voie qu'elle était à lui avant.
+
+**Q56 — [Arnaud Bidel]** : Un contributeur actif doit-il pouvoir consulter l'historique de ses propres actions, ou cet historique doit-il rester visible uniquement pour les administrateurs ?  
+**[M. Payet]** : Qu'il voie ce qu'il a fait lui-même sur sa tâche, ça ne me dérange pas, c'est son travail. S'il voit aussi « créée par Julien, confiée à Thomas », pas de souci non plus. Ce que je ne veux pas, c'est qu'il tombe sur quelque chose qui parle des risques ou des points faibles du club.
 
 ## Synthèse validée en fin d'entretien
 
